@@ -20,9 +20,6 @@
 tensorflow-gpu==1.13.1  
 keras==2.1.5  
 
-### 注意事项
-代码中的yolo4_weights.h5是基于608x608的图片训练的，但是由于显存原因。我将代码中的图片大小修改成了416x416。有需要的可以修改回来。 代码中的默认anchors是基于608x608的图片的。   
-
 ### 小技巧的设置
 在train.py文件下：   
 1、mosaic参数可用于控制是否实现Mosaic数据增强。   
@@ -30,10 +27,8 @@ keras==2.1.5
 3、label_smoothing可用于控制是否Label Smoothing平滑。
 
 ### 文件下载
-训练所需的yolo4_weights.h5可在百度网盘中下载。  
-链接: https://pan.baidu.com/s/1FF79PmRc8BzZk8M_ARdMmw 提取码: dc2j  
-yolo4_weights.h5是coco数据集的权重。  
-yolo4_voc_weights.h5是voc数据集的权重。
+训练所需的yolov4_tiny_voc.h5可在百度网盘中下载。  
+链接: https://pan.baidu.com/s/1zROPV3Ix4sO7O86gmGkbTg 提取码: nhxq
 
 ### 训练步骤
 1、本文使用VOC格式进行训练。  
