@@ -17,8 +17,7 @@
 - [ ] ……balabla
 
 ### 所需环境
-tensorflow-gpu==1.13.1  
-keras==2.1.5  
+tensorflow-gpu==2.2.0
 
 ### 小技巧的设置
 在train.py文件下：   
