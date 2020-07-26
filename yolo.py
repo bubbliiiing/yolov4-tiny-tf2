@@ -185,5 +185,3 @@ class YOLO(object):
         print(end - start)
         return image
 
-    def close_session(self):
-        self.sess.close()
