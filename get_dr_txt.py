@@ -28,17 +28,10 @@ class mAP_YOLO(YOLO):
 
         # 载入模型，如果原来的模型里已经包括了模型结构则直接载入。
         # 否则先构建模型再载入
-        try:
-            self.yolo_model = load_model(model_path, compile=False)
-        except:
-            self.yolo_model = yolo_body(Input(shape=(None,None,3)), num_anchors//2, num_classes)
-            self.yolo_model.load_weights(self.model_path)
-        else:
-            assert self.yolo_model.layers[-1].output_shape[-1] == \
-                num_anchors/len(self.yolo_model.output) * (num_classes + 5), \
-                'Mismatch between model and given anchor and class sizes'
-
+        self.yolo_model = yolo_body(Input(shape=(None,None,3)), num_anchors//2, num_classes)
+        self.yolo_model.load_weights(self.model_path,by_name=True)
         print('{} model, anchors, and classes loaded.'.format(model_path))
+
 
         # 画框设置不同的颜色
         hsv_tuples = [(x / len(self.class_names), 1., 1.)
@@ -53,32 +46,46 @@ class mAP_YOLO(YOLO):
         np.random.shuffle(self.colors)
         np.random.seed(None)
 
-        self.input_image_shape = K.placeholder(shape=(2, ))
-
-        boxes, scores, classes = yolo_eval(self.yolo_model.output, self.anchors,
-                num_classes, self.input_image_shape,
-                score_threshold=self.score, iou_threshold=self.iou)
-        return boxes, scores, classes
+        if self.eager:
+            self.input_image_shape = Input([2,],batch_size=1)
+            inputs = [*self.yolo_model.output, self.input_image_shape]
+            outputs = Lambda(yolo_eval, output_shape=(1,), name='yolo_eval',
+                arguments={'anchors': self.anchors, 'num_classes': len(self.class_names), 'image_shape': self.model_image_size, 
+                'score_threshold': self.score, 'eager': True})(inputs)
+            self.yolo_model = Model([self.yolo_model.input, self.input_image_shape], outputs)
+        else:
+            self.input_image_shape = K.placeholder(shape=(2, ))
+            
+            self.boxes, self.scores, self.classes = yolo_eval(self.yolo_model.output, self.anchors,
+                    num_classes, self.input_image_shape,
+                    score_threshold=self.score, iou_threshold=self.iou)
 
     #---------------------------------------------------#
     #   检测图片
     #---------------------------------------------------#
     def detect_image(self, image_id, image):
         f = open("./input/detection-results/"+image_id+".txt","w") 
+
         # 调整图片使其符合输入要求
-        boxed_image = letterbox_image(image, self.model_image_size)
+        new_image_size = self.model_image_size
+        boxed_image = letterbox_image(image, new_image_size)
         image_data = np.array(boxed_image, dtype='float32')
         image_data /= 255.
         image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
 
-        # 预测结果
-        out_boxes, out_scores, out_classes = self.sess.run(
-            [self.boxes, self.scores, self.classes],
-            feed_dict={
-                self.yolo_model.input: image_data,
-                self.input_image_shape: [image.size[1], image.size[0]],
-                K.learning_phase(): 0
-            })
+        if self.eager:
+            # 预测结果
+            input_image_shape = np.expand_dims(np.array([image.size[1], image.size[0]], dtype='float32'), 0)
+            out_boxes, out_scores, out_classes = self.yolo_model.predict([image_data, input_image_shape]) 
+        else:
+            # 预测结果
+            out_boxes, out_scores, out_classes = self.sess.run(
+                [self.boxes, self.scores, self.classes],
+                feed_dict={
+                    self.yolo_model.input: image_data,
+                    self.input_image_shape: [image.size[1], image.size[0]],
+                    K.learning_phase(): 0
+                })
 
         for i, c in enumerate(out_classes):
             predicted_class = self.class_names[int(c)]
