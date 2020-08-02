@@ -7,7 +7,7 @@ from timeit import default_timer as timer
 from tensorflow.compat.v1.keras import backend as K
 from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import Input
-from tensorflow.keras.layers import Input, Lambda
+from tensorflow.keras.layers import Lambda
 from tensorflow.keras.models import Model
 from PIL import Image, ImageFont, ImageDraw
 from nets.yolo4_tiny import yolo_body,yolo_eval
