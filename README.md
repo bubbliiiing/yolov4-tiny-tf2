@@ -1,4 +1,4 @@
-## YOLOV4：You Only Look Once目标检测模型在Keras当中的实现
+## YOLOV4-Tiny：You Only Look Once-Tiny目标检测模型在Keras当中的实现
 ---
 
 ### 目录
@@ -9,13 +9,6 @@
 5. [预测步骤 How2predict](#预测步骤)
 6. [训练步骤 How2train](#训练步骤)
 7. [参考资料 Reference](#Reference)
-
-### YOLOV4的改进
-- [x] 主干特征提取网络：DarkNet53 => CSPDarkNet53
-- [x] 特征金字塔：SPP，PAN
-- [x] 训练用到的小技巧：Mosaic数据增强、Label Smoothing平滑、CIOU、学习率余弦退火衰减
-- [x] 激活函数：使用Mish激活函数
-- [ ] ……balabla
 
 ### 所需环境
 tensorflow-gpu==2.2.0
