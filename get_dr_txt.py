@@ -10,19 +10,27 @@ import copy
 import colorsys
 import tensorflow as tf
 from timeit import default_timer as timer
-from tensorflow.compat.v1.keras import backend as K
+from tensorflow.keras import backend as K
 from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import Input, Lambda
 from tensorflow.keras.models import Model
 from PIL import Image, ImageFont, ImageDraw
 from nets.yolo4_tiny import yolo_body,yolo_eval
 from utils.utils import letterbox_image
+from tqdm import tqdm
+
+import tensorflow as tf
+
+gpus = tf.config.experimental.list_physical_devices(device_type='GPU')
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+    
 class mAP_YOLO(YOLO):
     #---------------------------------------------------#
     #   获得所有的分类
     #---------------------------------------------------#
     def generate(self):
-        self.score = 0.05
+        self.score = 0.001
         model_path = os.path.expanduser(self.model_path)
         assert model_path.endswith('.h5'), 'Keras model or weights must be a .h5 file.'
         
@@ -112,12 +120,11 @@ if not os.path.exists("./input/detection-results"):
 if not os.path.exists("./input/images-optional"):
     os.makedirs("./input/images-optional")
 
-for image_id in image_ids:
+for image_id in tqdm(image_ids):
     image_path = "./VOCdevkit/VOC2007/JPEGImages/"+image_id+".jpg"
     image = Image.open(image_path)
     # 开启后在之后计算mAP可以可视化
     # image.save("./input/images-optional/"+image_id+".jpg")
     yolo.detect_image(image_id,image)
-    print(image_id," done!")
     
 print("Conversion completed!")
