@@ -2,16 +2,26 @@
 ---
 
 ### 目录
-1. [所需环境 Environment](#所需环境)
-2. [注意事项 Attention](#注意事项)
-3. [小技巧的设置 TricksSet](#小技巧的设置)
-4. [文件下载 Download](#文件下载)
-5. [预测步骤 How2predict](#预测步骤)
-6. [训练步骤 How2train](#训练步骤)
-7. [参考资料 Reference](#Reference)
+1. [性能情况 Performance](#性能情况)
+2. [所需环境 Environment](#所需环境)
+3. [注意事项 Attention](#注意事项)
+4. [小技巧的设置 TricksSet](#小技巧的设置)
+5. [文件下载 Download](#文件下载)
+6. [预测步骤 How2predict](#预测步骤)
+7. [训练步骤 How2train](#训练步骤)
+8. [参考资料 Reference](#Reference)
+
+### 性能情况
+| 训练数据集 | 权值文件名称 | 测试数据集 | 输入图片大小 | mAP 0.5:0.95 | mAP 0.5 |
+| :-----: | :-----: | :------: | :------: | :------: | :-----: |
+| VOC07+12+COCO | [yolov4_tiny_weights_voc.h5](https://github.com/bubbliiiing/yolov4-tiny-tf2/releases/download/v1.1/yolov4_tiny_weights_voc.h5) | VOC-Test07 | 416x416 | - | 75.0
+| COCO-Train2017 | [yolov4_tiny_weights_coco.h5](https://github.com/bubbliiiing/yolov4-tiny-tf2/releases/download/v1.1/yolov4_tiny_weights_coco.h5) | COCO-Val2017 | 416x416 | 19.1 | 38.4
 
 ### 所需环境
 tensorflow-gpu==2.2.0
+
+### 注意事项
+代码中的yolov4_tiny_weights_coco.h5和yolov4_tiny_weights_voc.h5是基于416x416的图片训练的。
 
 ### 小技巧的设置
 在train.py文件下：   
@@ -20,8 +30,8 @@ tensorflow-gpu==2.2.0
 3、label_smoothing可用于控制是否Label Smoothing平滑。
 
 ### 文件下载
-训练所需的yolov4_tiny_voc.h5可在百度网盘中下载。  
-链接: https://pan.baidu.com/s/1zROPV3Ix4sO7O86gmGkbTg 提取码: nhxq
+训练所需的yolov4_tiny_weights_coco.h5和yolov4_tiny_weights_voc.h5可在百度网盘中下载。   
+链接: https://pan.baidu.com/s/127QvzFcEO83ZzV81hsB_fQ 提取码: 234g
 
 ### 预测步骤
 #### 1、使用预训练权重
