@@ -15,9 +15,9 @@ from utils.utils import letterbox_image
 
 class YOLO(object):
     _defaults = {
-        "model_path": 'model_data/yolov4_tiny_voc.h5',
+        "model_path": 'model_data/yolov4_tiny_weights_coco.h5',
         "anchors_path": 'model_data/yolo_anchors.txt',
-        "classes_path": 'model_data/voc_classes.txt',
+        "classes_path": 'model_data/coco_classes.txt',
         "score" : 0.5,
         "iou" : 0.3,
         "eager" : False,
@@ -79,9 +79,9 @@ class YOLO(object):
         # 载入模型，如果原来的模型里已经包括了模型结构则直接载入。
         # 否则先构建模型再载入
         self.yolo_model = yolo_body(Input(shape=(None,None,3)), num_anchors//2, num_classes)
-        self.yolo_model.load_weights(self.model_path,by_name=True)
+        self.yolo_model.load_weights(self.model_path)
         print('{} model, anchors, and classes loaded.'.format(model_path))
-
+        self.yolo_model.save_weights(self.model_path)
 
         # 画框设置不同的颜色
         hsv_tuples = [(x / len(self.class_names), 1., 1.)
@@ -184,4 +184,3 @@ class YOLO(object):
         end = timer()
         print(end - start)
         return image
-
