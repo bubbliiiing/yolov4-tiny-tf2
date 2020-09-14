@@ -1,4 +1,4 @@
-## YOLOV4-Tiny：You Only Look Once-Tiny目标检测模型在Keras当中的实现
+## YOLOV4-Tiny：You Only Look Once-Tiny目标检测模型在TF2当中的实现
 ---
 
 ### 目录
@@ -14,8 +14,8 @@
 ### 性能情况
 | 训练数据集 | 权值文件名称 | 测试数据集 | 输入图片大小 | mAP 0.5:0.95 | mAP 0.5 |
 | :-----: | :-----: | :------: | :------: | :------: | :-----: |
-| VOC07+12+COCO | [yolov4_tiny_weights_voc.h5](https://github.com/bubbliiiing/yolov4-tiny-tf2/releases/download/v1.1/yolov4_tiny_weights_voc.h5) | VOC-Test07 | 416x416 | - | 75.0
-| COCO-Train2017 | [yolov4_tiny_weights_coco.h5](https://github.com/bubbliiiing/yolov4-tiny-tf2/releases/download/v1.1/yolov4_tiny_weights_coco.h5) | COCO-Val2017 | 416x416 | 19.1 | 38.4
+| VOC07+12+COCO | [yolov4_tiny_weights_voc.h5](https://github.com/bubbliiiing/yolov4-tiny-tf2/releases/download/v1.0/yolov4_tiny_weights_voc.h5) | VOC-Test07 | 416x416 | - | 75.0
+| COCO-Train2017 | [yolov4_tiny_weights_coco.h5](https://github.com/bubbliiiing/yolov4-tiny-tf2/releases/download/v1.0/yolov4_tiny_weights_coco.h5) | COCO-Val2017 | 416x416 | 19.1 | 38.4
 
 ### 所需环境
 tensorflow-gpu==2.2.0
@@ -46,9 +46,9 @@ a、按照训练步骤训练。
 b、在yolo.py文件里面，在如下部分修改model_path和classes_path使其对应训练好的文件；**model_path对应logs文件夹下面的权值文件，classes_path是model_path对应分的类**。  
 ```python
 _defaults = {
-    "model_path": 'model_data/yolov4_tiny_voc.h5',
+    "model_path": 'model_data/yolov4_tiny_weights_coco.h5',
     "anchors_path": 'model_data/yolo_anchors.txt',
-    "classes_path": 'model_data/voc_classes.txt,
+    "classes_path": 'model_data/coco_classes.txt,
     "score" : 0.5,
     "iou" : 0.3,
     # 显存比较小可以使用416x416
