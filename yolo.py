@@ -81,7 +81,6 @@ class YOLO(object):
         self.yolo_model = yolo_body(Input(shape=(None,None,3)), num_anchors//2, num_classes)
         self.yolo_model.load_weights(self.model_path)
         print('{} model, anchors, and classes loaded.'.format(model_path))
-        self.yolo_model.save_weights(self.model_path)
 
         # 画框设置不同的颜色
         hsv_tuples = [(x / len(self.class_names), 1., 1.)
