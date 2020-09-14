@@ -9,6 +9,7 @@ from nets.yolo4_tiny import yolo_body
 from nets.loss import yolo_loss
 from utils.utils import get_random_data, get_random_data_with_Mosaic, rand, WarmUpCosineDecayScheduler, ModelCheckpoint
 from functools import partial
+from tqdm import tqdm
 import time
 import os
 
@@ -153,40 +154,46 @@ def fit_one_epoch(net, yolo_loss, optimizer, epoch, epoch_size, epoch_size_val, 
     loss = 0
     val_loss = 0
     start_time = time.time()
-    for iteration, batch in enumerate(gen):
-        if iteration>=epoch_size:
-            break
-        images, target0, target1 = batch[0], batch[1], batch[2]
-        targets = [target0, target1]
-        targets = [tf.convert_to_tensor(target) for target in targets]
-        loss_value = train_step(images, yolo_loss, targets, net, optimizer, regularization)
-        loss = loss + loss_value
+    with tqdm(total=epoch_size,desc=f'Epoch {epoch + 1}/{Epoch}',postfix=dict,mininterval=0.3) as pbar:
+        for iteration, batch in enumerate(gen):
+            if iteration>=epoch_size:
+                break
+            images, target0, target1 = batch[0], batch[1], batch[2]
+            targets = [target0, target1]
+            targets = [tf.convert_to_tensor(target) for target in targets]
+            loss_value = train_step(images, yolo_loss, targets, net, optimizer, regularization)
+            loss = loss + loss_value
 
-        waste_time = time.time() - start_time
-        print('\nEpoch:'+ str(epoch+1) + '/' + str(Epoch))
-        print('iter:' + str(iteration) + '/' + str(epoch_size) + ' || Total Loss: %.4f || %.4fs/step' % (loss/(iteration+1),waste_time))
-        start_time = time.time()
+            waste_time = time.time() - start_time
+            pbar.set_postfix(**{'total_loss': float(loss) / (iteration + 1), 
+                                'step/s'    : waste_time})
+            pbar.update(1)
+            start_time = time.time()
         
     print('Start Validation')
-    for iteration, batch in enumerate(genval):
-        if iteration>=epoch_size_val:
-            break
-        # 计算验证集loss
-        images, target0, target1 = batch[0], batch[1], batch[2]
-        targets = [target0, target1]
-        targets = [tf.convert_to_tensor(target) for target in targets]
+    with tqdm(total=epoch_size_val, desc=f'Epoch {epoch + 1}/{Epoch}',postfix=dict,mininterval=0.3) as pbar:
+        for iteration, batch in enumerate(genval):
+            if iteration>=epoch_size_val:
+                break
+            # 计算验证集loss
+            images, target0, target1 = batch[0], batch[1], batch[2]
+            targets = [target0, target1]
+            targets = [tf.convert_to_tensor(target) for target in targets]
 
-        P5_output, P4_output = net(images)
-        args = [P5_output, P4_output] + targets
-        loss_value = yolo_loss(args,anchors,num_classes,label_smoothing=label_smoothing)
-        if regularization:
-            # 加入正则化损失
-            loss_value = tf.reduce_sum(net.losses) + loss_value
-        # 更新验证集loss
-        val_loss = val_loss + loss_value
+            P5_output, P4_output = net(images)
+            args = [P5_output, P4_output] + targets
+            loss_value = yolo_loss(args,anchors,num_classes,label_smoothing=label_smoothing)
+            if regularization:
+                # 加入正则化损失
+                loss_value = tf.reduce_sum(net.losses) + loss_value
+            # 更新验证集loss
+            val_loss = val_loss + loss_value
+
+            pbar.set_postfix(**{'total_loss': float(val_loss)/ (iteration + 1)})
+            pbar.update(1)
 
     print('Finish Validation')
-    print('\nEpoch:'+ str(epoch+1) + '/' + str(Epoch))
+    print('Epoch:'+ str(epoch+1) + '/' + str(Epoch))
     print('Total Loss: %.4f || Val Loss: %.4f ' % (loss/(epoch_size+1),val_loss/(epoch_size_val+1)))
     net.save_weights('logs/Epoch%d-Total_Loss%.4f-Val_Loss%.4f.h5'%((epoch+1),loss/(epoch_size+1),val_loss/(epoch_size_val+1)))
       
@@ -194,6 +201,10 @@ gpus = tf.config.experimental.list_physical_devices(device_type='GPU')
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
+#----------------------------------------------------#
+#   检测精度mAP和pr曲线计算参考视频
+#   https://www.bilibili.com/video/BV1zE411u7Vw
+#----------------------------------------------------#
 if __name__ == "__main__":
     #----------------------------------------------#
     #   视频中说的速度慢问题已经解决了很多
@@ -206,7 +217,7 @@ if __name__ == "__main__":
     classes_path = 'model_data/voc_classes.txt'    
     anchors_path = 'model_data/yolo_anchors.txt'
     # 预训练模型的位置
-    weights_path = 'model_data/yolov4_tiny_voc.h5'
+    weights_path = 'model_data/yolov4_tiny_weights_coco.h5'
     # 获得classes和anchor
     class_names = get_classes(classes_path)
     anchors = get_anchors(anchors_path)
@@ -241,7 +252,9 @@ if __name__ == "__main__":
     print('Create YOLOv4 model with {} anchors and {} classes.'.format(num_anchors, num_classes))
     model_body = yolo_body(image_input, num_anchors//2, num_classes)
     
-    # 载入预训练权重
+    #-------------------------------------------#
+    #   权值文件的下载请看README
+    #-------------------------------------------#
     print('Load weights {}.'.format(weights_path))
     model_body.load_weights(weights_path, by_name=True, skip_mismatch=True)
     
@@ -259,10 +272,17 @@ if __name__ == "__main__":
     for i in range(freeze_layers): model_body.layers[i].trainable = False
     print('Freeze the first {} layers of total {} layers.'.format(freeze_layers, len(model_body.layers)))
     
-    # 调整非主干模型first
+    #------------------------------------------------------#
+    #   主干特征提取网络特征通用，冻结训练可以加快训练速度
+    #   也可以在训练初期防止权值被破坏。
+    #   Init_Epoch为起始世代
+    #   Freeze_Epoch为冻结训练的世代
+    #   Epoch总训练世代
+    #   提示OOM或者显存不足请调小Batch_size
+    #------------------------------------------------------#
     if True:
         Init_epoch = 0
-        Freeze_epoch = 25
+        Freeze_epoch = 50
         # batch_size大小，每次喂入多少数据
         batch_size = 16
         # 最大学习率
@@ -310,8 +330,8 @@ if __name__ == "__main__":
 
     # 解冻后训练
     if True:
-        Freeze_epoch = 25
-        Epoch = 50
+        Freeze_epoch = 50
+        Epoch = 100
         # batch_size大小，每次喂入多少数据
         batch_size = 16
         # 最大学习率
