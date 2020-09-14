@@ -161,7 +161,7 @@ if __name__ == "__main__":
     #   现存比较大可以使用608x608
     #----------------------------------------------#
     input_shape = (416,416)
-    mosaic = True
+    mosaic = False
     Cosine_scheduler = False
     label_smoothing = 0
 
