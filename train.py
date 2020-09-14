@@ -134,6 +134,11 @@ gpus = tf.config.experimental.list_physical_devices(device_type='GPU')
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
+
+#----------------------------------------------------#
+#   检测精度mAP和pr曲线计算参考视频
+#   https://www.bilibili.com/video/BV1zE411u7Vw
+#----------------------------------------------------#
 if __name__ == "__main__":
     # 标签的位置
     annotation_path = '2007_train.txt'
@@ -150,9 +155,11 @@ if __name__ == "__main__":
     num_anchors = len(anchors)
     # 训练后的模型保存的位置
     log_dir = 'logs/'
-    # 输入的shape大小
-    # 显存比较小可以使用416x416
-    # 现存比较大可以使用608x608
+    #----------------------------------------------#
+    #   输入的shape大小
+    #   显存比较小可以使用416x416
+    #   现存比较大可以使用608x608
+    #----------------------------------------------#
     input_shape = (416,416)
     mosaic = True
     Cosine_scheduler = False
@@ -170,7 +177,9 @@ if __name__ == "__main__":
     model_body = yolo_body(image_input, num_anchors//2, num_classes)
     
     model_body.summary()
-    # 载入预训练权重
+    #-------------------------------------------#
+    #   权值文件的下载请看README
+    #-------------------------------------------#
     print('Load weights {}.'.format(weights_path))
     model_body.load_weights(weights_path, by_name=True, skip_mismatch=True)
     
@@ -206,7 +215,14 @@ if __name__ == "__main__":
     for i in range(freeze_layers): model_body.layers[i].trainable = False
     print('Freeze the first {} layers of total {} layers.'.format(freeze_layers, len(model_body.layers)))
 
-    # 调整非主干模型first
+    #------------------------------------------------------#
+    #   主干特征提取网络特征通用，冻结训练可以加快训练速度
+    #   也可以在训练初期防止权值被破坏。
+    #   Init_Epoch为起始世代
+    #   Freeze_Epoch为冻结训练的世代
+    #   Epoch总训练世代
+    #   提示OOM或者显存不足请调小Batch_size
+    #------------------------------------------------------#
     if True:
         Init_epoch = 0
         Freeze_epoch = 50
