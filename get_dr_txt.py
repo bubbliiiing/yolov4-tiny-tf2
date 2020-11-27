@@ -64,14 +64,15 @@ class mAP_YOLO(YOLO):
             inputs = [*self.yolo_model.output, self.input_image_shape]
             outputs = Lambda(yolo_eval, output_shape=(1,), name='yolo_eval',
                 arguments={'anchors': self.anchors, 'num_classes': len(self.class_names), 'image_shape': self.model_image_size, 
-                'score_threshold': self.score, 'eager': True})(inputs)
+                'score_threshold': self.score, 'eager': True, 'max_boxes': self.max_boxes})(inputs)
             self.yolo_model = Model([self.yolo_model.input, self.input_image_shape], outputs)
         else:
             self.input_image_shape = K.placeholder(shape=(2, ))
             
             self.boxes, self.scores, self.classes = yolo_eval(self.yolo_model.output, self.anchors,
-                    num_classes, self.input_image_shape,
+                    num_classes, self.input_image_shape, max_boxes=self.max_boxes,
                     score_threshold=self.score, iou_threshold=self.iou)
+ 
 
     #---------------------------------------------------#
     #   检测图片
@@ -80,7 +81,7 @@ class mAP_YOLO(YOLO):
         f = open("./input/detection-results/"+image_id+".txt","w") 
 
         # 调整图片使其符合输入要求
-        new_image_size = self.model_image_size
+        new_image_size = (self.model_image_size[1],self.model_image_size[0])
         boxed_image = letterbox_image(image, new_image_size)
         image_data = np.array(boxed_image, dtype='float32')
         image_data /= 255.
