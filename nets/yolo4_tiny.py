@@ -202,5 +202,9 @@ def yolo_eval(yolo_outputs,
     boxes_ = K.concatenate(boxes_, axis=0)
     scores_ = K.concatenate(scores_, axis=0)
     classes_ = K.concatenate(classes_, axis=0)
+    if eager:
+        boxes_ =K.expand_dims(boxes_, axis=0)
+        scores_= K.expand_dims(scores_, axis=0)
+        classes_=K.expand_dims(classes_, axis=0)
 
     return boxes_, scores_, classes_
