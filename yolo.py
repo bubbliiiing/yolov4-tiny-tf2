@@ -127,6 +127,9 @@ class YOLO(object):
             # 预测结果
             input_image_shape = np.expand_dims(np.array([image.size[1], image.size[0]], dtype='float32'), 0)
             out_boxes, out_scores, out_classes = self.yolo_model.predict([image_data, input_image_shape]) 
+            out_boxes = tf.squeeze(out_boxes, axis=0)
+            out_scores = tf.squeeze(out_scores, axis=0)
+            out_classes = tf.squeeze(out_classes, axis=0)
         else:
             # 预测结果
             out_boxes, out_scores, out_classes = self.sess.run(
