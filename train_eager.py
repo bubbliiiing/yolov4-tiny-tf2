@@ -293,7 +293,8 @@ if __name__ == "__main__":
     num_anchors = len(anchors)
     #------------------------------------------------------#
     #   Yolov4的tricks应用
-    #   mosaic 马赛克数据增强 True or False
+    #   mosaic 马赛克数据增强 True or False 
+    #   实际测试时mosaic数据增强并不稳定，所以默认为False
     #   Cosine_scheduler 余弦退火学习率 True or False
     #   label_smoothing 标签平滑 0.01以下一般 如0.01、0.005
     #------------------------------------------------------#
@@ -383,7 +384,7 @@ if __name__ == "__main__":
             lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
                 initial_learning_rate=learning_rate_base,
                 decay_steps=epoch_size,
-                decay_rate=0.95,
+                decay_rate=0.92,
                 staircase=True
             )
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
@@ -429,7 +430,7 @@ if __name__ == "__main__":
             lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
                 initial_learning_rate=learning_rate_base,
                 decay_steps = epoch_size,
-                decay_rate=0.95,
+                decay_rate=0.92,
                 staircase=True
             )
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
