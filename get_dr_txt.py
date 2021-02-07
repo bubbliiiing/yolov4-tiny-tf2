@@ -29,6 +29,8 @@ class mAP_YOLO(YOLO):
     #   获得所有的分类
     #---------------------------------------------------#
     def generate(self):
+        self.score = 0.01
+        self.iou = 0.5
         model_path = os.path.expanduser(self.model_path)
         assert model_path.endswith('.h5'), 'Keras model or weights must be a .h5 file.'
         
@@ -67,16 +69,15 @@ class mAP_YOLO(YOLO):
             inputs = [*self.yolo_model.output, self.input_image_shape]
             outputs = Lambda(yolo_eval, output_shape=(1,), name='yolo_eval',
                 arguments={'anchors': self.anchors, 'num_classes': len(self.class_names), 'image_shape': self.model_image_size, 
-                'score_threshold': self.score, 'eager': True, 'max_boxes': self.max_boxes})(inputs)
+                'score_threshold': self.score, 'eager': True, 'max_boxes': self.max_boxes, 'letterbox_image': self.letterbox_image})(inputs)
             self.yolo_model = Model([self.yolo_model.input, self.input_image_shape], outputs)
         else:
             self.input_image_shape = K.placeholder(shape=(2, ))
             
             self.boxes, self.scores, self.classes = yolo_eval(self.yolo_model.output, self.anchors,
                     num_classes, self.input_image_shape, max_boxes=self.max_boxes,
-                    score_threshold=self.score, iou_threshold=self.iou)
+                    score_threshold=self.score, iou_threshold=self.iou, letterbox_image=self.letterbox_image)
  
-
     #---------------------------------------------------#
     #   检测图片
     #---------------------------------------------------#
@@ -85,9 +86,13 @@ class mAP_YOLO(YOLO):
 
         #---------------------------------------------------------#
         #   给图像增加灰条，实现不失真的resize
+        #   也可以直接resize进行识别
         #---------------------------------------------------------#
-        new_image_size = (self.model_image_size[1],self.model_image_size[0])
-        boxed_image = letterbox_image(image, new_image_size)
+        if self.letterbox_image:
+            boxed_image = letterbox_image(image, (self.model_image_size[1],self.model_image_size[0]))
+        else:
+            boxed_image = image.convert('RGB')
+            boxed_image = boxed_image.resize((self.model_image_size[1],self.model_image_size[0]), Image.BICUBIC)
         image_data = np.array(boxed_image, dtype='float32')
         image_data /= 255.
         #---------------------------------------------------------#
@@ -114,7 +119,7 @@ class mAP_YOLO(YOLO):
 
         for i, c in enumerate(out_classes):
             predicted_class = self.class_names[int(c)]
-            score = str(out_scores[i])
+            score = str(float(out_scores[i]))
 
             top, left, bottom, right = out_boxes[i]
             f.write("%s %s %s %s %s %s\n" % (predicted_class, score[:6], str(int(left)), str(int(top)), str(int(right)),str(int(bottom))))

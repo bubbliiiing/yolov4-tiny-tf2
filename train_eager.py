@@ -182,12 +182,12 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
 # 防止bug
 def get_train_step_fn():
     @tf.function
-    def train_step(imgs, yolo_loss, targets, net, optimizer, regularization):
+    def train_step(imgs, yolo_loss, targets, net, optimizer, regularization, normalize):
         with tf.GradientTape() as tape:
             # 计算loss
             P5_output, P4_output = net(imgs, training=True)
             args = [P5_output, P4_output] + targets
-            loss_value = yolo_loss(args,anchors,num_classes,label_smoothing=label_smoothing)
+            loss_value = yolo_loss(args,anchors,num_classes,label_smoothing=label_smoothing,normalize=normalize)
             if regularization:
                 # 加入正则化损失
                 loss_value = tf.reduce_sum(net.losses) + loss_value
@@ -207,7 +207,7 @@ def fit_one_epoch(net, yolo_loss, optimizer, epoch, epoch_size, epoch_size_val, 
             images, target0, target1 = batch[0], batch[1], batch[2]
             targets = [target0, target1]
             targets = [tf.convert_to_tensor(target) for target in targets]
-            loss_value = train_step(images, yolo_loss, targets, net, optimizer, regularization)
+            loss_value = train_step(images, yolo_loss, targets, net, optimizer, regularization, normalize=normalize)
             loss = loss + loss_value
 
             pbar.set_postfix(**{'total_loss': float(loss) / (iteration + 1), 
@@ -226,7 +226,7 @@ def fit_one_epoch(net, yolo_loss, optimizer, epoch, epoch_size, epoch_size_val, 
 
             P5_output, P4_output = net(images)
             args = [P5_output, P4_output] + targets
-            loss_value = yolo_loss(args,anchors,num_classes,label_smoothing=label_smoothing)
+            loss_value = yolo_loss(args,anchors,num_classes,label_smoothing=label_smoothing,normalize=normalize)
             if regularization:
                 # 加入正则化损失
                 loss_value = tf.reduce_sum(net.losses) + loss_value

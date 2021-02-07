@@ -27,7 +27,6 @@ def DarknetConv2D(*args, **kwargs):
     darknet_conv_kwargs.update(kwargs)
     return Conv2D(*args, **darknet_conv_kwargs)
 
-
 #---------------------------------------------------#
 #   卷积块
 #   DarknetConv2D + BatchNormalization + LeakyReLU

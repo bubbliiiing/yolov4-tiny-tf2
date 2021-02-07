@@ -21,21 +21,15 @@ video.py里面测试的FPS会低于该FPS，因为摄像头的读取频率有限
 '''
 class FPS_YOLO(YOLO):
     def get_FPS(self, image, test_interval):
-        #---------------------------------------------------------#
-        #   给图像增加灰条，实现不失真的resize
-        #---------------------------------------------------------#
-        new_image_size = (self.model_image_size[1],self.model_image_size[0])
-        boxed_image = letterbox_image(image, new_image_size)
+        if self.letterbox_image:
+            boxed_image = letterbox_image(image, (self.model_image_size[1],self.model_image_size[0]))
+        else:
+            boxed_image = image.convert('RGB')
+            boxed_image = boxed_image.resize((self.model_image_size[1],self.model_image_size[0]), Image.BICUBIC)
         image_data = np.array(boxed_image, dtype='float32')
         image_data /= 255.
-        #---------------------------------------------------------#
-        #   添加上batch_size维度
-        #---------------------------------------------------------#
-        image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
-
-        #---------------------------------------------------------#
-        #   将图像输入网络当中进行预测！
-        #---------------------------------------------------------#
+        image_data = np.expand_dims(image_data, 0)
+        
         if self.eager:
             # 预测结果
             input_image_shape = np.expand_dims(np.array([image.size[1], image.size[0]], dtype='float32'), 0)
@@ -52,9 +46,6 @@ class FPS_YOLO(YOLO):
 
         t1 = time.time()
         for _ in range(test_interval):
-            #---------------------------------------------------------#
-            #   将图像输入网络当中进行预测！
-            #---------------------------------------------------------#
             if self.eager:
                 # 预测结果
                 input_image_shape = np.expand_dims(np.array([image.size[1], image.size[0]], dtype='float32'), 0)
