@@ -19,6 +19,9 @@
 | 训练数据集 | 权值文件名称 | 测试数据集 | 输入图片大小 | mAP 0.5:0.95 | mAP 0.5 |
 | :-----: | :-----: | :------: | :------: | :------: | :-----: |
 | VOC07+12+COCO | [yolov4_tiny_weights_voc.h5](https://github.com/bubbliiiing/yolov4-tiny-tf2/releases/download/v1.0/yolov4_tiny_weights_voc.h5) | VOC-Test07 | 416x416 | - | 77.5
+| VOC07+12+COCO | [yolov4_tiny_weights_voc_SE.h5](https://github.com/bubbliiiing/yolov4-tiny-tf2/releases/download/v1.0/yolov4_tiny_weights_voc_SE.h5) | VOC-Test07 | 416x416 | - | 78.6
+| VOC07+12+COCO | [yolov4_tiny_weights_voc_CBAM.h5](https://github.com/bubbliiiing/yolov4-tiny-tf2/releases/download/v1.0/yolov4_tiny_weights_voc_CBAM.h5) | VOC-Test07 | 416x416 | - | 78.9
+| VOC07+12+COCO | [yolov4_tiny_weights_voc_ECA.h5](https://github.com/bubbliiiing/yolov4-tiny-tf2/releases/download/v1.0/yolov4_tiny_weights_voc_ECA.h5) | VOC-Test07 | 416x416 | - | 78.2
 | COCO-Train2017 | [yolov4_tiny_weights_coco.h5](https://github.com/bubbliiiing/yolov4-tiny-tf2/releases/download/v1.0/yolov4_tiny_weights_coco.h5) | COCO-Val2017 | 416x416 | 21.8 | 41.3
 
 ## 所需环境
@@ -35,7 +38,7 @@ tensorflow-gpu==2.2.0
 
 ## 文件下载
 训练所需的yolov4_tiny_weights_coco.h5和yolov4_tiny_weights_voc.h5可在百度网盘中下载。   
-链接: https://pan.baidu.com/s/1FNRe6K6BB8xXZuRS7Z4Shw 提取码: 75me  
+链接: https://pan.baidu.com/s/1i6zBqpK_DxbrLa_okxoKew 提取码: qtks     
 
 VOC数据集下载地址如下：  
 VOC2007+2012训练集    
@@ -56,16 +59,31 @@ img/street.jpg
 2. 在yolo.py文件里面，在如下部分修改model_path和classes_path使其对应训练好的文件；**model_path对应logs文件夹下面的权值文件，classes_path是model_path对应分的类**。  
 ```python
 _defaults = {
-    "model_path": 'model_data/yolov4_tiny_weights_coco.h5',
-    "anchors_path": 'model_data/yolo_anchors.txt',
-    "classes_path": 'model_data/coco_classes.txt,
-    "score" : 0.5,
-    "iou" : 0.3,
-    # 显存比较小可以使用416x416
-    # 显存比较大可以使用608x608
-    "model_image_size" : (416, 416)
+    "model_path"        : 'model_data/yolov4_tiny_weights_coco.h5',
+    "anchors_path"      : 'model_data/yolo_anchors.txt',
+    "classes_path"      : 'model_data/coco_classes.txt',
+    #-------------------------------#
+    #   所使用的注意力机制的类型
+    #   phi = 0为不使用注意力机制
+    #   phi = 1为SE
+    #   phi = 2为CBAM
+    #   phi = 3为ECA
+    #-------------------------------#
+    "phi"               : 0,  
+    "score"             : 0.5,
+    "iou"               : 0.3,
+    "max_boxes"         : 100,
+    #-------------------------------#
+    #   显存比较小可以使用416x416
+    #   显存比较大可以使用608x608
+    #-------------------------------#
+    "model_image_size"  : (416, 416),
+    #---------------------------------------------------------------------#
+    #   该变量用于控制是否使用letterbox_image对输入图像进行不失真的resize，
+    #   在多次测试后，发现关闭letterbox_image直接resize的效果更好
+    #---------------------------------------------------------------------#
+    "letterbox_image"   : False,
 }
-
 ```
 3. 运行predict.py，输入  
 ```python
