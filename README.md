@@ -31,7 +31,7 @@
 tensorflow-gpu==2.2.0
 
 ## 注意事项
-代码中的yolov4_tiny_weights_coco.h5和yolov4_tiny_weights_voc.h5是基于416x416的图片训练的。
+代码中的各类权值均是基于416x416的图片训练的。
 
 ## 小技巧的设置
 在train.py文件下：   
@@ -40,7 +40,7 @@ tensorflow-gpu==2.2.0
 3、label_smoothing可用于控制是否Label Smoothing平滑。
 
 ## 文件下载
-训练所需的yolov4_tiny_weights_coco.h5和yolov4_tiny_weights_voc.h5可在百度网盘中下载。   
+训练所需的各类权值均可在百度网盘中下载。   
 链接: https://pan.baidu.com/s/1i6zBqpK_DxbrLa_okxoKew 提取码: qtks     
 
 VOC数据集下载地址如下：  
