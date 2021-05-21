@@ -1,36 +1,43 @@
 import colorsys
-import copy
 import os
-from timeit import default_timer as timer
+import time
 
 import numpy as np
 import tensorflow as tf
 from PIL import Image, ImageDraw, ImageFont
-from tensorflow.compat.v1.keras import backend as K
 from tensorflow.keras.layers import Input, Lambda
-from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.models import Model
 
 from nets.yolo4_tiny import yolo_body, yolo_eval
 from utils.utils import letterbox_image
 
 
 #--------------------------------------------#
-#   使用自己训练好的模型预测需要修改2个参数
-#   model_path和classes_path都需要修改！
+#   使用自己训练好的模型预测需要修改3个参数
+#   model_path、classes_path和phi都需要修改！
 #   如果出现shape不匹配，一定要注意
-#   训练时的model_path和classes_path参数的修改
+#   训练时的model_path、classes_path和phi参数的修改
 #--------------------------------------------#
 class YOLO(object):
     _defaults = {
         "model_path"        : 'model_data/yolov4_tiny_weights_coco.h5',
         "anchors_path"      : 'model_data/yolo_anchors.txt',
         "classes_path"      : 'model_data/coco_classes.txt',
+        #-------------------------------#
+        #   所使用的注意力机制的类型
+        #   phi = 0为不使用注意力机制
+        #   phi = 1为SE
+        #   phi = 2为CBAM
+        #   phi = 3为ECA
+        #-------------------------------#
+        "phi"               : 0,  
         "score"             : 0.5,
         "iou"               : 0.3,
-        "eager"             : False,
         "max_boxes"         : 100,
-        # 显存比较小可以使用416x416
-        # 显存比较大可以使用608x608
+        #-------------------------------#
+        #   显存比较小可以使用416x416
+        #   显存比较大可以使用608x608
+        #-------------------------------#
         "model_image_size"  : (416, 416),
         #---------------------------------------------------------------------#
         #   该变量用于控制是否使用letterbox_image对输入图像进行不失真的resize，
@@ -53,9 +60,6 @@ class YOLO(object):
         self.__dict__.update(self._defaults)
         self.class_names = self._get_class()
         self.anchors = self._get_anchors()
-        if not self.eager:
-            tf.compat.v1.disable_eager_execution()
-            self.sess = K.get_session()
         self.generate()
 
     #---------------------------------------------------#
@@ -94,8 +98,9 @@ class YOLO(object):
         #---------------------------------------------------------#
         #   载入模型
         #---------------------------------------------------------#
-        self.yolo_model = yolo_body(Input(shape=(None,None,3)), num_anchors//2, num_classes)
+        self.yolo_model = yolo_body(Input(shape=(None,None,3)), num_anchors//2, num_classes, self.phi)
         self.yolo_model.load_weights(self.model_path)
+        self.yolo_model.save_weights(self.model_path)
         print('{} model, anchors, and classes loaded.'.format(model_path))
 
         # 画框设置不同的颜色
@@ -115,20 +120,13 @@ class YOLO(object):
         #   在yolo_eval函数中，我们会对预测结果进行后处理
         #   后处理的内容包括，解码、非极大抑制、门限筛选等
         #---------------------------------------------------------#
-        if self.eager:
-            self.input_image_shape = Input([2,],batch_size=1)
-            inputs = [*self.yolo_model.output, self.input_image_shape]
-            outputs = Lambda(yolo_eval, output_shape=(1,), name='yolo_eval',
-                arguments={'anchors': self.anchors, 'num_classes': len(self.class_names), 'image_shape': self.model_image_size, 
-                'score_threshold': self.score, 'eager': True, 'max_boxes': self.max_boxes, 'letterbox_image': self.letterbox_image})(inputs)
-            self.yolo_model = Model([self.yolo_model.input, self.input_image_shape], outputs)
-        else:
-            self.input_image_shape = K.placeholder(shape=(2, ))
-            
-            self.boxes, self.scores, self.classes = yolo_eval(self.yolo_model.output, self.anchors,
-                    num_classes, self.input_image_shape, max_boxes=self.max_boxes,
-                    score_threshold=self.score, iou_threshold=self.iou, letterbox_image=self.letterbox_image)
- 
+        self.input_image_shape = Input([2,],batch_size=1)
+        inputs = [*self.yolo_model.output, self.input_image_shape]
+        outputs = Lambda(yolo_eval, output_shape=(1,), name='yolo_eval',
+            arguments={'anchors': self.anchors, 'num_classes': len(self.class_names), 'image_shape': self.model_image_size, 
+            'score_threshold': self.score, 'eager': True, 'max_boxes': self.max_boxes, 'letterbox_image': self.letterbox_image})(inputs)
+        self.yolo_model = Model([self.yolo_model.input, self.input_image_shape], outputs)
+
     @tf.function
     def get_pred(self, image_data, input_image_shape):
         out_boxes, out_scores, out_classes = self.yolo_model([image_data, input_image_shape], training=False)
@@ -139,14 +137,18 @@ class YOLO(object):
     #---------------------------------------------------#
     def detect_image(self, image):
         #---------------------------------------------------------#
+        #   在这里将图像转换成RGB图像，防止灰度图在预测时报错。
+        #---------------------------------------------------------#
+        image = image.convert('RGB')
+
+        #---------------------------------------------------------#
         #   给图像增加灰条，实现不失真的resize
         #   也可以直接resize进行识别
         #---------------------------------------------------------#
         if self.letterbox_image:
             boxed_image = letterbox_image(image, (self.model_image_size[1],self.model_image_size[0]))
         else:
-            boxed_image = image.convert('RGB')
-            boxed_image = boxed_image.resize((self.model_image_size[1],self.model_image_size[0]), Image.BICUBIC)
+            boxed_image = image.resize((self.model_image_size[1],self.model_image_size[0]), Image.BICUBIC)
         image_data = np.array(boxed_image, dtype='float32')
         image_data /= 255.
         #---------------------------------------------------------#
@@ -157,26 +159,15 @@ class YOLO(object):
         #---------------------------------------------------------#
         #   将图像输入网络当中进行预测！
         #---------------------------------------------------------#
-        if self.eager:
-            # 预测结果
-            input_image_shape = np.expand_dims(np.array([image.size[1], image.size[0]], dtype='float32'), 0)
-            out_boxes, out_scores, out_classes = self.get_pred(image_data, input_image_shape) 
-        else:
-            # 预测结果
-            out_boxes, out_scores, out_classes = self.sess.run(
-                [self.boxes, self.scores, self.classes],
-                feed_dict={
-                    self.yolo_model.input: image_data,
-                    self.input_image_shape: [image.size[1], image.size[0]],
-                    K.learning_phase(): 0
-                })
+        input_image_shape = np.expand_dims(np.array([image.size[1], image.size[0]], dtype='float32'), 0)
+        out_boxes, out_scores, out_classes = self.get_pred(image_data, input_image_shape) 
         
         print('Found {} boxes for {}'.format(len(out_boxes), 'img'))
 
         #---------------------------------------------------------#
         #   设置字体
         #---------------------------------------------------------#
-        font = ImageFont.truetype(font='font/simhei.ttf',
+        font = ImageFont.truetype(font='model_data/simhei.ttf',
                     size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
         thickness = max((image.size[0] + image.size[1]) // 300, 1)
         
@@ -219,5 +210,23 @@ class YOLO(object):
 
         return image
 
-    def close_session(self):
-        self.sess.close()
+    def get_FPS(self, image, test_interval):
+        if self.letterbox_image:
+            boxed_image = letterbox_image(image, (self.model_image_size[1],self.model_image_size[0]))
+        else:
+            boxed_image = image.convert('RGB')
+            boxed_image = boxed_image.resize((self.model_image_size[1],self.model_image_size[0]), Image.BICUBIC)
+        image_data = np.array(boxed_image, dtype='float32')
+        image_data /= 255.
+        image_data = np.expand_dims(image_data, 0)
+        
+        input_image_shape = np.expand_dims(np.array([image.size[1], image.size[0]], dtype='float32'), 0)
+        out_boxes, out_scores, out_classes = self.get_pred(image_data, input_image_shape) 
+
+        t1 = time.time()
+        for _ in range(test_interval):
+            input_image_shape = np.expand_dims(np.array([image.size[1], image.size[0]], dtype='float32'), 0)
+            out_boxes, out_scores, out_classes = self.get_pred(image_data, input_image_shape) 
+        t2 = time.time()
+        tact_time = (t2 - t1) / test_interval
+        return tact_time
