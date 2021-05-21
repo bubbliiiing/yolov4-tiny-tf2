@@ -473,9 +473,9 @@ if __name__ == "__main__":
         else:
             if Cosine_scheduler:
                 # 预热期
-                warmup_epoch    = int((Freeze_epoch-Init_epoch)*0.2)
+                warmup_epoch    = int((Epoch-Freeze_epoch)*0.2)
                 # 总共的步长
-                total_steps     = int((Freeze_epoch-Init_epoch) * num_train / batch_size)
+                total_steps     = int((Epoch-Freeze_epoch) * num_train / batch_size)
                 # 预热步长
                 warmup_steps    = int(warmup_epoch * num_train / batch_size)
                 # 学习率
@@ -489,7 +489,7 @@ if __name__ == "__main__":
 
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
         if eager:
-            for epoch in range(Init_epoch,Freeze_epoch):
+            for epoch in range(Freeze_epoch,Epoch):
                 fit_one_epoch(model_body, yolo_loss, optimizer, epoch, epoch_size, epoch_size_val,gen, gen_val, 
                             Freeze_epoch, anchors, num_classes, label_smoothing, regularization, get_train_step_fn())
         else:
