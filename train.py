@@ -193,7 +193,7 @@ if __name__ == "__main__":
                     initial_learning_rate = lr, first_decay_steps = 5 * epoch_step, t_mul = 1.0, alpha = 1e-2)
             else:
                 lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-                    initial_learning_rate = lr, decay_steps = epoch_step, decay_rate=0.92, staircase=True)
+                    initial_learning_rate = lr, decay_steps = epoch_step, decay_rate=0.94, staircase=True)
             
             optimizer = tf.keras.optimizers.Adam(learning_rate = lr_schedule)
 
@@ -247,7 +247,7 @@ if __name__ == "__main__":
                     initial_learning_rate = lr, first_decay_steps = 5 * epoch_step, t_mul = 1.0, alpha = 1e-2)
             else:
                 lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-                    initial_learning_rate = lr, decay_steps = epoch_step, decay_rate=0.92, staircase=True)
+                    initial_learning_rate = lr, decay_steps = epoch_step, decay_rate=0.94, staircase=True)
             
             optimizer = tf.keras.optimizers.Adam(learning_rate = lr_schedule)
 
