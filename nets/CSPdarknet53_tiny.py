@@ -20,8 +20,12 @@ def route_group(input_layer, groups, group_id):
 #------------------------------------------------------#
 @wraps(Conv2D)
 def DarknetConv2D(*args, **kwargs):
-    darknet_conv_kwargs = {'kernel_initializer' : RandomNormal(stddev=0.02), 'kernel_regularizer': l2(5e-4)}
-    darknet_conv_kwargs['padding'] = 'valid' if kwargs.get('strides')==(2,2) else 'same'
+    darknet_conv_kwargs = {'kernel_initializer' : RandomNormal(stddev=0.02), 'kernel_regularizer' : l2(kwargs.get('weight_decay', 5e-4))}
+    darknet_conv_kwargs['padding'] = 'valid' if kwargs.get('strides')==(2, 2) else 'same'   
+    try:
+        del kwargs['weight_decay']
+    except:
+        pass
     darknet_conv_kwargs.update(kwargs)
     return Conv2D(*args, **darknet_conv_kwargs)
 
@@ -64,25 +68,25 @@ def DarknetConv2D_BN_Leaky(*args, **kwargs):
 #   存在一个大残差边
 #   这个大残差边绕过了很多的残差结构
 #---------------------------------------------------#
-def resblock_body(x, num_filters):
+def resblock_body(x, num_filters, weight_decay=5e-4):
     # 利用一个3x3卷积进行特征整合
-    x = DarknetConv2D_BN_Leaky(num_filters, (3,3))(x)
+    x = DarknetConv2D_BN_Leaky(num_filters, (3,3), weight_decay=weight_decay)(x)
     # 引出一个大的残差边route
     route = x
 
     # 对特征层的通道进行分割，取第二部分作为主干部分。
     x = Lambda(route_group,arguments={'groups':2, 'group_id':1})(x) 
     # 对主干部分进行3x3卷积
-    x = DarknetConv2D_BN_Leaky(int(num_filters/2), (3,3))(x)
+    x = DarknetConv2D_BN_Leaky(int(num_filters/2), (3,3), weight_decay=weight_decay)(x)
     # 引出一个小的残差边route_1
     route_1 = x
     # 对第主干部分进行3x3卷积
-    x = DarknetConv2D_BN_Leaky(int(num_filters/2), (3,3))(x)
+    x = DarknetConv2D_BN_Leaky(int(num_filters/2), (3,3), weight_decay=weight_decay)(x)
     # 主干部分与残差部分进行相接
     x = Concatenate()([x, route_1])
 
     # 对相接后的结果进行1x1卷积
-    x = DarknetConv2D_BN_Leaky(num_filters, (1,1))(x)
+    x = DarknetConv2D_BN_Leaky(num_filters, (1,1), weight_decay=weight_decay)(x)
     feat = x
     x = Concatenate()([route, x])
 
@@ -94,23 +98,23 @@ def resblock_body(x, num_filters):
 #---------------------------------------------------#
 #   CSPdarknet_tiny的主体部分
 #---------------------------------------------------#
-def darknet_body(x):
+def darknet_body(x, weight_decay=5e-4):
     # 首先利用两次步长为2x2的3x3卷积进行高和宽的压缩
     # 416,416,3 -> 208,208,32 -> 104,104,64
     x = ZeroPadding2D(((1,0),(1,0)))(x)
-    x = DarknetConv2D_BN_Leaky(32, (3,3), strides=(2,2))(x)
+    x = DarknetConv2D_BN_Leaky(32, (3,3), strides=(2,2), weight_decay=weight_decay)(x)
     x = ZeroPadding2D(((1,0),(1,0)))(x)
-    x = DarknetConv2D_BN_Leaky(64, (3,3), strides=(2,2))(x)
+    x = DarknetConv2D_BN_Leaky(64, (3,3), strides=(2,2), weight_decay=weight_decay)(x)
     
     # 104,104,64 -> 52,52,128
-    x, _ = resblock_body(x,num_filters = 64)
+    x, _ = resblock_body(x, num_filters = 64, weight_decay=weight_decay)
     # 52,52,128 -> 26,26,256
-    x, _ = resblock_body(x,num_filters = 128)
+    x, _ = resblock_body(x, num_filters = 128, weight_decay=weight_decay)
     # 26,26,256 -> x为13,13,512
     #           -> feat1为26,26,256
-    x, feat1 = resblock_body(x,num_filters = 256)
+    x, feat1 = resblock_body(x, num_filters = 256, weight_decay=weight_decay)
     # 13,13,512 -> 13,13,512
-    x = DarknetConv2D_BN_Leaky(512, (3,3))(x)
+    x = DarknetConv2D_BN_Leaky(512, (3,3), weight_decay=weight_decay)(x)
 
     feat2 = x
     return feat1, feat2
