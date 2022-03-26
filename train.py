@@ -214,7 +214,7 @@ if __name__ == "__main__":
     #------------------------------------------------------#
     #   创建yolo模型
     #------------------------------------------------------#
-    model_body  = yolo_body((None, None, 3), anchors_mask, num_classes, phi = phi)
+    model_body  = yolo_body((None, None, 3), anchors_mask, num_classes, phi = phi, weight_decay = weight_decay)
     if model_path != '':
         #------------------------------------------------------#
         #   载入预训练权重
